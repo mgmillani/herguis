@@ -1,0 +1,18 @@
+Name:          HerGUIs
+Version:       1.0
+Description:   A GUI for the Mecaria project.
+License:       GPL-3
+License-file:  COPYING
+Copyright:     (c) 2014 Marcelo Garlet Millani
+Author:        Marcelo Garlet Millani
+Maintainer:    marcelogmillani@gmail.com
+Build-type:    Simple
+Cabal-version: >=1.2
+
+--data-files:    html/footer.html,html/header.html,style.css
+
+executable herguis
+  Build-Depends: base, monads-tf, gtksourceview2, gtk, time, filepath, directory
+  Main-Is: Main.hs
+  other-modules: Herguis.Setup
+  Extensions: DoAndIfThenElse, NoMonomorphismRestriction
