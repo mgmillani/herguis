@@ -19,6 +19,8 @@ data FileStatus =
 		  filenameRef  ::IORef String
 		, lastUpdateRef::IORef UTCTime
 		, buffer       ::TextBuffer
+		, syncRef      ::IORef Bool
+		, modifiedRef  ::IORef Bool
 	}
 
-defaultConfig = GuiConfig{text = "", filename = "", lastUpdate = Nothing, syncWithFile = False}
+defaultConfig = GuiConfig{text = "", filename = "", lastUpdate = Nothing, syncWithFile = True}

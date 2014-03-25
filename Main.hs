@@ -10,7 +10,7 @@ import Herguis.Setup
 
 main = do
 	initGUI
-	sampleText <- readFile "example"
-	updateTime <- getModificationTime "example"
-	buildInterface defaultConfig{text = sampleText, filename = "example", lastUpdate = Just updateTime, syncWithFile = True}
+	-- sampleText <- readFile "example"
+	-- updateTime <- getModificationTime "example"
+	buildInterface defaultConfig
 	mainGUI

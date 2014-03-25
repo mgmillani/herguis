@@ -1,5 +1,6 @@
 module Herguis.Setup(buildInterface) where
 
+import Control.Monad.Trans(liftIO)
 import Data.IORef
 import Data.Time.Clock
 import Graphics.UI.Gtk
@@ -16,8 +17,10 @@ setupMenuItemFile fileStatus = do
 	s1 <- separatorMenuItemNew
 
 	new <- menuItemNewWithMnemonic "_New"
+	new `on` menuItemActivate $ Action.new fileStatus
 
 	open <- menuItemNewWithMnemonic "_Open"
+	open `on` menuItemActivate $ Action.open fileStatus
 
 	save <- menuItemNewWithMnemonic "_Save"
 	save `on` menuItemActivate $ Action.save fileStatus
@@ -72,6 +75,7 @@ buildInterface config = do
 			Just t -> t
 
 	syncFile <- newIORef $ syncWithFile config
+	modified <- newIORef False
 
 	window  <- windowNew
 	mainBox <- vBoxNew False 0
@@ -80,8 +84,10 @@ buildInterface config = do
 
 	(tTextView,tTextBuffer) <- setupTextView
 	textBufferInsertAtCursor tTextBuffer (text config)
+	tTextBuffer `on` bufferChanged $ liftIO $ writeIORef modified True
 
-	mMenuBar <- setupMenuBar FileStatus{filenameRef = activeFile,lastUpdateRef = updateTime, buffer = tTextBuffer}
+	let fileStatus = FileStatus{filenameRef = activeFile,lastUpdateRef = updateTime, buffer = tTextBuffer, syncRef = syncFile, modifiedRef = modified}
+	mMenuBar <- setupMenuBar fileStatus
 
 	set window [windowDefaultWidth := 640, windowDefaultHeight := 480, containerChild := mainBox, containerBorderWidth := 1]
 	boxPackStart mainBox mMenuBar PackNatural 0
@@ -89,6 +95,6 @@ buildInterface config = do
 	containerAdd textWindow tTextView
 
 	window `on` deleteEvent $ Action.quit >> return False
-	window `on` focusInEvent $ Action.reloadFile activeFile updateTime tTextBuffer syncFile
+	window `on` focusInEvent $ liftIO $ Action.reloadFile fileStatus
 
 	widgetShowAll window
