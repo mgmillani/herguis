@@ -9,24 +9,31 @@ import System.Directory
 
 import Herguis.Entities
 
-quit = do
-	liftIO mainQuit
+quit fileStatus window = do
+	modified <- liftIO $ readIORef (modifiedRef fileStatus)
+	if modified then do
+		cancelled <- liftIO $ askToSave fileStatus window
+		if cancelled then return True
+		else liftIO mainQuit >> return False
+	else
+		liftIO mainQuit >> return False
 
 -- | asks the user whether the current file should be saved or not
-askToSave fileStatus = do
+-- | returns whether the user cancelled the action or not
+askToSave fileStatus window = do
 	modified <- readIORef (modifiedRef fileStatus)
 	if not modified then return False
 	else do
 		dialog <- dialogNew
+		windowSetPosition dialog WinPosCenterOnParent
+		set dialog [windowWindowPosition := WinPosCenterOnParent, windowTransientFor := window]
 		upper <- dialogGetUpper dialog
 		actionArea <- dialogGetActionArea dialog
 
-		lbl <- labelNew $ Just "fucking work!"
-		msg <- entryNew
-		set msg [entryEditable := False, entryHasFrame := False, entryText := "Do you want to die?"]
+		msg <- labelNew $ Just "Do you want to save the file before closing?"
+		set msg [widgetVisible := True]
 
 		containerAdd upper msg
-		containerAdd upper lbl
 
 		dialogAddButton dialog "Yes" ResponseYes
 		dialogAddButton dialog "No" ResponseNo
@@ -35,14 +42,14 @@ askToSave fileStatus = do
 		answer <- dialogRun dialog
 		widgetDestroy dialog
 		case answer of
-			ResponseYes -> save fileStatus >> return False
+			ResponseYes -> save fileStatus window
 			ResponseNo -> return False
 			ResponseCancel -> return True
 
 -- | creates a new file
 -- | if changes were made to the current file, prompts the user if it should be saved first
-new fileStatus = do
-	cancelled <- askToSave fileStatus
+new fileStatus window = do
+	cancelled <- askToSave fileStatus window
 	if not cancelled then do
 		set (buffer fileStatus) [textBufferText := ""]
 		writeIORef (filenameRef fileStatus) ""
@@ -51,13 +58,12 @@ new fileStatus = do
 		writeIORef (modifiedRef fileStatus) False
 	else return ()
 
-
 -- | opens an existing file
 -- | if changes were made to the current file, prompts the user if it should be saved first
-open fileStatus = do
+open fileStatus window = do
 	let activeFile = filenameRef fileStatus
 	currentName <- readIORef activeFile
-	dialog <- fileChooserDialogNew Nothing Nothing FileChooserActionOpen [("Open",ResponseAccept), ("Cancel",ResponseCancel)]
+	dialog <- fileChooserDialogNew Nothing (Just window) FileChooserActionOpen [("Open",ResponseAccept), ("Cancel",ResponseCancel)]
 	if currentName /= "" then do
 		fileChooserSetFilename dialog currentName
 		return ()
@@ -88,16 +94,18 @@ saveFile fileStatus = do
 	writeIORef (modifiedRef fileStatus) False
 
 -- | saves the file to its current location, or open the save as dialog if it has not been saved
-save fileStatus = do
+-- | returns whether the user cancelled the action or not
+save fileStatus window = do
 	dest <- readIORef $ filenameRef fileStatus
-	if dest == "" then saveAs fileStatus else saveFile fileStatus
+	if dest == "" then saveAs fileStatus window else saveFile fileStatus >> return False
 
 -- | opens a dialog, allowing the user to choose where to save the current text
 -- | further changes will be saved to this new file, and syncing will be done with it as well
-saveAs fileStatus = do
+-- | returns whether the user cancelled the action or not
+saveAs fileStatus window = do
 	let activeFile = filenameRef fileStatus
 	currentName <- readIORef activeFile
-	dialog <- fileChooserDialogNew Nothing Nothing FileChooserActionSave [("Save",ResponseAccept), ("Cancel",ResponseReject)]
+	dialog <- fileChooserDialogNew Nothing (Just window) FileChooserActionSave [("Save",ResponseOk), ("Cancel",ResponseCancel)]
 	set dialog [fileChooserDoOverwriteConfirmation := True]
 	if currentName /= "" then do
 		fileChooserSetFilename dialog currentName
@@ -105,18 +113,17 @@ saveAs fileStatus = do
 	else return ()
 
 	answer <- dialogRun dialog
+	widgetDestroy dialog
 
-	if answer == ResponseAccept then do
+	if answer == ResponseOk then do
 		destination <- fileChooserGetFilename dialog
 		case destination of
-			Nothing -> return ()
+			Nothing -> return False
 			Just dest -> do
 				writeIORef activeFile dest
 				saveFile fileStatus
-				return ()
-	else return ()
-
-	widgetDestroy dialog
+				return False
+	else return True
 
 -- | loads a new file
 load fname fileStatus = do

@@ -9,7 +9,7 @@ import Graphics.UI.Gtk.SourceView
 import qualified Herguis.Action as Action
 import Herguis.Entities
 
-setupMenuItemFile fileStatus = do
+setupMenuItemFile fileStatus window = do
 	file <- menuItemNewWithMnemonic "_File"
 	menu <- menuNew
 
@@ -17,19 +17,19 @@ setupMenuItemFile fileStatus = do
 	s1 <- separatorMenuItemNew
 
 	new <- menuItemNewWithMnemonic "_New"
-	new `on` menuItemActivate $ Action.new fileStatus
+	new `on` menuItemActivate $ Action.new fileStatus window
 
 	open <- menuItemNewWithMnemonic "_Open"
-	open `on` menuItemActivate $ Action.open fileStatus
+	open `on` menuItemActivate $ Action.open fileStatus window
 
 	save <- menuItemNewWithMnemonic "_Save"
-	save `on` menuItemActivate $ Action.save fileStatus
+	save `on` menuItemActivate $ Action.save fileStatus window >> return ()
 
 	saveas <- menuItemNewWithMnemonic "Save _as"
-	saveas `on` menuItemActivate $ Action.saveAs fileStatus
+	saveas `on` menuItemActivate $ Action.saveAs fileStatus window >> return ()
 
 	exit <- menuItemNewWithMnemonic "_Exit"
-	exit `on` menuItemActivate $ Action.quit
+	exit `on` menuItemActivate $ Action.quit fileStatus window >>= \x -> return ()
 
 	containerAdd menu new
 	containerAdd menu s0
@@ -46,9 +46,9 @@ setupMenuItemFile fileStatus = do
 setupMenuItemEdit = menuItemNewWithMnemonic "_Edit"
 setupMenuItemHelp = menuItemNewWithMnemonic "_Help"
 
-setupMenuBar fileStatus = do
+setupMenuBar fileStatus window = do
 	bar <- menuBarNew
-	miFile <- setupMenuItemFile fileStatus
+	miFile <- setupMenuItemFile fileStatus window
 	miEdit <- setupMenuItemEdit
 	miHelp <- setupMenuItemHelp
 
@@ -87,14 +87,14 @@ buildInterface config = do
 	tTextBuffer `on` bufferChanged $ liftIO $ writeIORef modified True
 
 	let fileStatus = FileStatus{filenameRef = activeFile,lastUpdateRef = updateTime, buffer = tTextBuffer, syncRef = syncFile, modifiedRef = modified}
-	mMenuBar <- setupMenuBar fileStatus
+	mMenuBar <- setupMenuBar fileStatus window
 
 	set window [windowDefaultWidth := 640, windowDefaultHeight := 480, containerChild := mainBox, containerBorderWidth := 1]
 	boxPackStart mainBox mMenuBar PackNatural 0
 	boxPackStart mainBox textWindow PackGrow 0
 	containerAdd textWindow tTextView
 
-	window `on` deleteEvent $ Action.quit >> return False
+	window `on` deleteEvent $ Action.quit fileStatus window
 	window `on` focusInEvent $ liftIO $ Action.reloadFile fileStatus
 
 	widgetShowAll window
