@@ -12,7 +12,6 @@ Cabal-version: >=1.2
 --data-files:    html/footer.html,html/header.html,style.css
 
 executable herguis
-  Build-Depends: base, monads-tf, gtksourceview2, gtk, time, filepath, directory
+  Build-Depends: base, monads-tf, parsec, gtksourceview2, gtk, time, filepath, directory, descrilo, process, containers
   Main-Is: Main.hs
-  other-modules: Herguis.Setup
   Extensions: DoAndIfThenElse, NoMonomorphismRestriction
