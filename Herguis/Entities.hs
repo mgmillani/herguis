@@ -93,20 +93,20 @@ defaultEditorStatus =
 	}
 
 data AssemblerStatus =
-	AssemblerStatus
-	{
-	  machineFile::String
-	, outputFile ::String
-	, outputType ::String
-	, symbolFile ::String
-	}
+  AssemblerStatus
+  {
+    machineFile::String
+  , outputFile ::String
+  , outputType ::String
+  , symbolFile ::String 
+  }
 
 defaultAssemblerStatus =
 	AssemblerStatus
 	{
 	  machineFile = ""
 	, outputFile  = ""
-	,	outputType  = "Mecaria0"
+	, outputType  = "Mecaria0"
 	, symbolFile  = ""
 	}
 appName = "herguis"
