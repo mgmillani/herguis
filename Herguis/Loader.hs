@@ -45,6 +45,52 @@ installConfig cFile config = do
 
 readLocation cDir l = if isRelative l then cDir ++ [pathSeparator] ++ l else l
 
+-- | parses a line of the message file
+-- |
+-- | it must be in the format <code> <type> <message>
+-- | comments are started by '#'
+parseMsgLine l =
+  (code, mtype, msg)
+  where
+    whiteSpace c = (c == ' ') || (c == '\t')
+    (code, r0) =  span (not . whiteSpace) (dropWhile whiteSpace l)
+    (mtype, r1) = span (not . whiteSpace) (dropWhile whiteSpace r0)
+    msg = (dropWhile whiteSpace r1)
+
+-- | creates 2 functions to parse errors and warnings based on the file that describes assembler messages
+loadMessageParser msgFile = do
+  contents <- readFile msgFile
+  let lns = lines contents
+      -- removes comments from the lines
+      clearComments e l =
+        if l == [] then [] else
+          let (h:r) = l
+          in
+          case e of
+            True ->
+              (case h of
+                'n' -> '\n'
+                't' -> '\t'
+                'r' -> '\r'
+                c -> c ): clearComments False r
+            False -> case h of
+              '\\' -> clearComments True r
+              '#' -> []
+              _ -> h : clearComments False r
+      clean = map (clearComments False) lns
+  return $ createMsgParseFunctions clean
+
+createMsgParseFunctions lns = createMsgParseFunctions' Nothing Nothing lns
+createMsgParseFunctions' (Just x) (Just y) _ = (Just x, Just y)
+createMsgParseFunctions' errorParse warningParse [] = (errorParse, warningParse)
+createMsgParseFunctions' errorParse warningParse (h:r) =
+  let (code, mtype, msg) = parseMsgLine h in
+  case code of
+    "0" -> createMsgParseFunctions' (Just (\x -> "error parser")) warningParse r
+    "1" -> createMsgParseFunctions' errorParse (Just (\y -> "warning parser")) r
+    _  -> createMsgParseFunctions' errorParse warningParse r
+  
+      
 loadConfig cFile cDir = do
 	descriptions <- loadDescriptionFile cFile "Machines"
 	let result = parse descriptions defaultConfig
