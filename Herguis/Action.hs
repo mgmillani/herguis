@@ -30,31 +30,34 @@ quit editorStatusRef assemblerStatusRef lastStatusFile window = do
 	return continue
 
 -- | writes error and warnings from the assembler to the given ListStore
+-- | 'parseError' and 'parseWarning' are functions that separate a message into type, line number and message
 addAssemblerOutput listStore stdout stderr parseError parseWarning = do
-	listStoreClear listStore
-	let warnings = lines stdout
-	let errors   = lines stderr
-
-	mapM_ (listStoreAppend listStore) $ zip warnings $ repeat "war"
-	mapM_ (listStoreAppend listStore) $ zip errors $ repeat "err"
+  listStoreClear listStore
+  let warnings = lines stdout
+      errors   = lines stderr
+  mapM_ putStrLn warnings
+  mapM_ putStrLn errors
+  mapM_ (listStoreAppend listStore) $ zip3 (repeat "war") (repeat "5") warnings
+  mapM_ (listStoreAppend listStore) $ zip3 (repeat "err") (repeat "6") errors
 
 
 -- | sends the source file to the assembler
 -- | if the source hasn't been saved, prompts the user
 assemble editorStatusRef assemblerStatusRef assembler messages outputList window = do
-	cancelled <- askToSave editorStatusRef assemblerStatusRef window "You have to save the file before assembling. Do you want to do it now?"
-	when (not cancelled) $ do
-		editorStatus <- readIORef editorStatusRef
-		assemblerStatus <- readIORef assemblerStatusRef
-		(sout, serr, eCode) <- Work.assemble editorStatus assemblerStatus assembler messages
-		addAssemblerOutput outputList sout serr
-		case eCode of
-			ExitSuccess -> return ()
-			ExitFailure f -> do
-				if null sout && null serr then
-					popupError ("Assembling failed:\n" ++ assembler ++ " finished with the error code: " ++ show f) window
-				else
-					return ()
+  cancelled <- askToSave editorStatusRef assemblerStatusRef window "You have to save the file before assembling. Do you want to do it now?"
+  when (not cancelled) $ do
+    editorStatus <- readIORef editorStatusRef
+    assemblerStatus <- readIORef assemblerStatusRef
+    (sout, serr, eCode) <- Work.assemble editorStatus assemblerStatus assembler messages
+    -- addAssemblerOutput outputList sout serr parseError parseWarning
+    case eCode of
+      ExitSuccess -> return ()
+      ExitFailure f -> do
+        putStrLn "failed"
+        if null sout && null serr then
+          popupError ("Assembling failed:\n" ++ assembler ++ " finished with the error code: " ++ show f) window
+        else
+          return ()
 
 
 -- | asks the user whether the current file should be saved or not
