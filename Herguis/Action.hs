@@ -49,7 +49,7 @@ assemble editorStatusRef assemblerStatusRef assembler messages outputList window
     editorStatus <- readIORef editorStatusRef
     assemblerStatus <- readIORef assemblerStatusRef
     (sout, serr, eCode) <- Work.assemble editorStatus assemblerStatus assembler messages
-    -- addAssemblerOutput outputList sout serr parseError parseWarning
+    addAssemblerOutput outputList sout serr [] []
     case eCode of
       ExitSuccess -> return ()
       ExitFailure f -> do
